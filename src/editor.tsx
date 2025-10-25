@@ -17,6 +17,7 @@ export default function Page() {
 
 function useLoroDocs() {
   const [loroState] = useState(() => {
+    console.debug("Creating LoroDocs");
     const loroA: LoroDocType = new LoroDoc()
     const loroB: LoroDocType = new LoroDoc()
 
@@ -30,6 +31,7 @@ function useLoroDocs() {
   })
 
   useEffect(() => {
+    console.debug("Subscribing to LoroDocs");
     const { loroA, loroB, idA, idB, awarenessA, awarenessB } = loroState
     const unsubscribeA = loroA.subscribeLocalUpdates((updates) => {
       loroB.import(updates)
@@ -50,6 +52,7 @@ function useLoroDocs() {
     awarenessA.addListener(awarenessAListener)
     awarenessB.addListener(awarenessBListener)
     return () => {
+      console.debug("Unsubscribing from LoroDocs");
       awarenessA.removeListener(awarenessAListener)
       awarenessB.removeListener(awarenessBListener)
       unsubscribeA()
