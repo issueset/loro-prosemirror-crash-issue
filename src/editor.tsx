@@ -1,61 +1,85 @@
-import { LoroDoc, type AwarenessListener } from 'loro-crdt'
-import { CursorAwareness, type LoroDocType } from 'loro-prosemirror'
-import { useEffect, useLayoutEffect, useState } from 'react'
+import { LoroDoc, type AwarenessListener, type PeerID } from "loro-crdt";
+import { CursorAwareness, type LoroDocType } from "loro-prosemirror";
+import { useState, useSyncExternalStore } from "react";
 
-import EditorComponent from './editor-component'
+import EditorComponent from "./editor-component";
 
 export default function Page() {
-  const { loroA, awarenessA, loroB, awarenessB } = useLoroDocs()
+  const [loroStore] = useState(() => new LoroStore());
+  const loroState = useSyncExternalStore(
+    loroStore.subscribe,
+    loroStore.getSnapshot
+  );
 
   return (
     <div className="h-full flex flex-col gap-2">
-      <EditorComponent loro={loroA} awareness={awarenessA} />
-      <EditorComponent loro={loroB} awareness={awarenessB} />
+      <EditorComponent
+        loro={loroState.loroA}
+        awareness={loroState.awarenessA}
+      />
+      <EditorComponent
+        loro={loroState.loroB}
+        awareness={loroState.awarenessB}
+      />
     </div>
-  )
+  );
 }
 
-function useLoroDocs() {
-  const [loroState] = useState(() => {
-    const loroA: LoroDocType = new LoroDoc()
-    const loroB: LoroDocType = new LoroDoc()
+class LoroStore {
+  private state: {
+    loroA: LoroDocType;
+    loroB: LoroDocType;
+    idA: PeerID;
+    idB: PeerID;
+    awarenessA: CursorAwareness;
+    awarenessB: CursorAwareness;
+  };
 
-    const idA = loroA.peerIdStr
-    const idB = loroB.peerIdStr
+  constructor() {
+    console.debug("LoroStore constructor");
 
-    const awarenessA = new CursorAwareness(idA)
-    const awarenessB = new CursorAwareness(idB)
+    const loroA: LoroDocType = new LoroDoc();
+    const loroB: LoroDocType = new LoroDoc();
+    const idA = loroA.peerIdStr;
+    const idB = loroB.peerIdStr;
+    const awarenessA = new CursorAwareness(idA);
+    const awarenessB = new CursorAwareness(idB);
+    this.state = { loroA, loroB, idA, idB, awarenessA, awarenessB };
+  }
 
-    return { loroA, loroB, idA, idB, awarenessA, awarenessB }
-  })
+  getSnapshot = () => {
+    return this.state;
+  };
 
-  useEffect(() => {
-    const { loroA, loroB, idA, idB, awarenessA, awarenessB } = loroState
+  subscribe = () => {
+    console.debug("LoroStore subscribe");
+
+    const { loroA, loroB, idA, idB, awarenessA, awarenessB } = this.state;
     const unsubscribeA = loroA.subscribeLocalUpdates((updates) => {
-      loroB.import(updates)
-    })
+      loroB.import(updates);
+    });
     const unsubscribeB = loroB.subscribeLocalUpdates((updates) => {
-      loroA.import(updates)
-    })
+      loroA.import(updates);
+    });
     const awarenessAListener: AwarenessListener = (_, origin) => {
-      if (origin === 'local') {
-        awarenessB.apply(awarenessA.encode([idA]))
+      if (origin === "local") {
+        awarenessB.apply(awarenessA.encode([idA]));
       }
-    }
+    };
     const awarenessBListener: AwarenessListener = (_, origin) => {
-      if (origin === 'local') {
-        awarenessA.apply(awarenessB.encode([idB]))
+      if (origin === "local") {
+        awarenessA.apply(awarenessB.encode([idB]));
       }
-    }
-    awarenessA.addListener(awarenessAListener)
-    awarenessB.addListener(awarenessBListener)
+    };
+    awarenessA.addListener(awarenessAListener);
+    awarenessB.addListener(awarenessBListener);
     return () => {
-      awarenessA.removeListener(awarenessAListener)
-      awarenessB.removeListener(awarenessBListener)
-      unsubscribeA()
-      unsubscribeB()
-    }
-  }, [loroState])
+      console.debug("LoroStore unsubscribe");
 
-  return loroState
+      awarenessA.removeListener(awarenessAListener);
+      awarenessB.removeListener(awarenessBListener);
+      unsubscribeA();
+      unsubscribeB();
+    };
+  };
 }
