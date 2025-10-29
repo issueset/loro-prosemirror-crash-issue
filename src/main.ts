@@ -28,7 +28,6 @@ function defineExtension(doc: LoroDocType, awareness: CursorAwareness) {
   ]);
 }
 
-type EditorExtension = ReturnType<typeof defineExtension>;
 
 // ============================================================================
 // EditorComponent (from editor-component.tsx)

@@ -5,4 +5,8 @@ import wasm from 'vite-plugin-wasm'
 
 export default defineConfig({
   plugins: [react(), wasm(), tailwindcss()],
+  build: {
+    target: "chrome139",
+    sourcemap: true,
+  }
 })
